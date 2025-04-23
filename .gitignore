@@ -1,0 +1,7 @@
+config.py
+db_chroma/
+docs/
+.venv/
+.DS_Store
+__pycache__/
+models/*/

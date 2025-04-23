@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Compliance Chatbot</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📄 Compliance Chatbot</h1>
+
+    <!-- Upload -->
+    <section>
+      <h2>Upload Policy PDF</h2>
+      <form id="uploadForm">
+        <input type="file" id="fileInput" required>
+        <button type="submit">Upload</button>
+      </form>
+      <p id="uploadStatus"></p>
+    </section>
+
+    <!-- Chat -->
+    <section>
+      <h2>Ask a Question</h2>
+      <div class="chatbox">
+        <input type="text" id="queryInput" placeholder="E.g. What is TDSR?" required>
+        <button onclick="sendQuery()">Ask</button>
+      </div>
+      <div id="answerArea"></div>
+    </section>
+
+    <!-- Clauses -->
+    <section>
+      <h2>View Clauses</h2>
+      <button onclick="loadClauses()">Load Clauses</button>
+      <div id="clausesArea"></div>
+    </section>
+  </div>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = document.getElementById('fileInput').files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      document.getElementById('uploadStatus').textContent = 'Uploading...';
+      try {
+        const res = await fetch('/upload_pdf', { method: 'POST', body: formData });
+        const data = await res.json();
+        document.getElementById('uploadStatus').textContent = 'Upload complete!';
+      } catch {
+        document.getElementById('uploadStatus').textContent = 'Upload failed.';
+      }
+    });
+
+    async function sendQuery() {
+      const query = document.getElementById('queryInput').value;
+      const answerArea = document.getElementById('answerArea');
+      answerArea.innerHTML = 'Thinking...';
+      try {
+        const res = await fetch(`/generate?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        console.log(data);
+        answerArea.innerHTML = `<h3>Answer</h3><p>${data.answer}</p><h4>Sources</h4><ul>${
+          data.retrieved_documents.map(doc => `<li><strong>${doc.section}</strong>: ${doc.excerpt}...</li>`).join('')
+        }</ul>`;
+      } catch {
+        answerArea.innerHTML = 'Error fetching answer.';
+      }
+    }
+
+    async function loadClauses() {
+      const area = document.getElementById('clausesArea');
+      area.innerHTML = 'Loading...';
+      try {
+        const res = await fetch('/clauses');
+        const data = await res.json();
+        area.innerHTML = data.clauses.map(clause => `
+          <div class="clause">
+            <h4>${clause.section_title}</h4>
+            <p>${clause.section_content.slice(0, 300)}...</p>
+            <ul>${clause.qa_pairs.map(q => `<li>${q.slice(0, 100)}...</li>`).join('')}</ul>
+          </div>
+        `).join('');
+      } catch {
+        area.innerHTML = 'Error loading clauses.';
+      }
+    }
+  </script>
+</body>
+</html>
